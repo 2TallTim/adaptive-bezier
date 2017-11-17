@@ -1,0 +1,35 @@
+.control{
+    width: 16px;
+    height: 16px;
+    border: 2px solid black;
+    border-radius: 50%;
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 100;
+    background-color: #f00;
+
+}
+.controlWrap{
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0px;
+    left: 0px;
+}
+canvas{
+    width: 800px;
+    height: 600px;
+    z-index: 0;
+    position: absolute;
+    top: 0;
+    left: 0; 
+}
+#canvasWrap{
+    width: 800px;
+    height: 600px;
+    position: relative;
+}
+.hidden{
+    display: none;
+}
