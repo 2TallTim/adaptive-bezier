@@ -3,9 +3,39 @@
 var MAX_DEGREE = 8;
 var MIN_DEGREE = 3;
 
+var MAX_DEPTH = 8;
+
 var controls = [];
 var renderer;
 
+function recursiveBezier(ptsList,stopCond,depth=0) {
+    //console.log(ptsList);
+    //console.log(depth);
+
+    if(depth>=MAX_DEPTH){
+        return [ptsList[0]]; //always return start point of seg
+    }else{
+        u = 0.5; //Split in the middle
+        let pl = ptsList;
+        let leftPts = [pl[0]];
+        let rightPts = [pl[pl.length-1]];
+        while(pl.length>1){
+            lastPl = pl;
+            pl = [];
+            for (var i = 0; i < lastPl.length-1; i++) {
+                //eval deCasteljau
+                pl[i] = {x:lastPl[i].x*u + (lastPl[i+1].x * (1-u)),
+                         y:lastPl[i].y*u + (lastPl[i+1].y * (1-u))};
+            }
+            leftPts.push(pl[0]);
+            rightPts.push(pl[pl.length-1]);
+        }
+        let leftRec  = recursiveBezier(leftPts, stopCond, depth+1);
+        let rightRec = recursiveBezier(rightPts, stopCond, depth+1);
+        rightRec.reverse();
+        return leftRec.concat(rightRec);
+    }
+}
 
 var BezierRenderer = function(canvas){
     BezierRenderer.canvas = canvas;
@@ -15,6 +45,7 @@ var BezierRenderer = function(canvas){
     BezierRenderer.showDCsubdiv = false;
     BezierRenderer.animDemoU = false;
     BezierRenderer.animHandle = -1;
+    BezierRenderer.alternateColors = false;
 
     BezierRenderer.toggleAnimDemoU = function() {
         if (BezierRenderer.animDemoU) {
@@ -29,7 +60,7 @@ var BezierRenderer = function(canvas){
 
     BezierRenderer.pingPongDemoU = function(){ //Animate the demoU for the deCasteljau parameter
         var d = new Date();
-        var period = 4000;
+        var period = 6000;
         if(d.getTime()%(period)>period/2){
             BezierRenderer.demoU = ((period) - d.getTime()%(period))/(period/2);
         }else{
@@ -51,8 +82,10 @@ var BezierRenderer = function(canvas){
             ptsList.push({x:controls[i].x,y:controls[i].y});
         }
         
+        //deCasteljau
+
+
         if(BezierRenderer.showDCsubdiv){
-            //the demo deCasteljau lines
             u = BezierRenderer.demoU;
             pl = ptsList;
             ctx.lineWidth = 3;
@@ -82,8 +115,8 @@ var BezierRenderer = function(canvas){
         //Control Polygon
 
         ctx.lineWidth = 3;
-        ctx.strokeStyle = "#888"; 
-        ctx.setLineDash([10,10]);
+        ctx.strokeStyle = "#999";
+        ctx.setLineDash([10,15]);
            
         for (var i = 1; i < controls.length && i <= BezierRenderer.degree; i++) {
             ctx.beginPath();
@@ -92,26 +125,35 @@ var BezierRenderer = function(canvas){
             ctx.stroke();
         }
 
+        //The actual bezier curve
 
-        //The actual bezier curvef
-        ctx.beginPath();
-        ctx.lineWidth = 5;
-        ctx.strokeStyle = "#000";
-        ctx.setLineDash([0]);
-        for (var u=0; u<1; u+=0.01){
-            pl = ptsList;
-            while(pl.length>1){
-                lastPl = pl;
-                pl = [];
-                for (var i = 0; i < lastPl.length-1; i++) {
-                    pl[i] = {x:lastPl[i].x*u + (lastPl[i+1].x * (1-u)),y:lastPl[i].y*u + (lastPl[i+1].y * (1-u))};
-                }
-            }
-            ctx.lineTo(pl[0].x,pl[0].y);
+        bez_pts = recursiveBezier(ptsList,(a)=>false);
+        bez_pts_dup = [bez_pts[0]];
+
+        //deduplicate bez_pts
+        for (var i = 1; i < bez_pts.length; i++) {
+            if(bez_pts[i].x != bez_pts[i-1].x || bez_pts[i].y != bez_pts[i-1].y){
+                bez_pts_dup.push(bez_pts[i]);
+            } 
         }
-        ctx.stroke();
+        bez_pts = bez_pts_dup;
 
 
+        ctx.lineWidth = 9;
+        ctx.setLineDash([0]);
+        ctx.lineCap = 'round';
+
+        for (var i = 1; i < bez_pts.length; i++) {
+            if (BezierRenderer.alternateColors && i%2 == 0) {
+                ctx.strokeStyle = "#f00";
+            }else{
+                ctx.strokeStyle = "#000";
+            }
+            ctx.beginPath();
+            ctx.moveTo(bez_pts[i-1].x,bez_pts[i-1].y);
+            ctx.lineTo(bez_pts[i].x,bez_pts[i].y);
+            ctx.stroke();
+        }
     }
 }
 
@@ -120,8 +162,8 @@ var BezierRenderer = function(canvas){
 var randomize = function(){  //Randomize curve point positions
     for (var i = 0; i < controls.length; i++) {
         c = controls[i]
-        c.y  = Math.floor(Math.random() * 600);
-        c.x = Math.floor(Math.random() * 800);
+        c.y  = Math.floor(Math.random() * canvas.height);
+        c.x = Math.floor(Math.random() * canvas.width);
         $(c.elem).css("top",c.y-11);
         $(c.elem).css("left",c.x-11);
     }
@@ -190,19 +232,26 @@ window.onload = function() {
     }
     degController.onChange(onClickFunc);//Redraw when the parameters are changed
     
+
+    gui.add(BezierRenderer,'alternateColors').onChange(function(value){
+        BezierRenderer.render();
+    });
+
     gui.add(this, 'randomize');
 
-    var du = gui.add(BezierRenderer,'demoU',0,1,0.01).listen();
+    var dcFolder = gui.addFolder('deCasteljau Visualizer');
+
+    var du = dcFolder.add(BezierRenderer,'demoU',0,1,0.01).listen();
 
     du.onChange(function(value){
         BezierRenderer.render();
     });
 
-    gui.add(BezierRenderer,'showDCsubdiv').onChange(function(value){
+    dcFolder.add(BezierRenderer,'showDCsubdiv').onChange(function(value){
         BezierRenderer.render();
     });
 
-    gui.add(BezierRenderer,'toggleAnimDemoU');
+    dcFolder.add(BezierRenderer,'toggleAnimDemoU');
     randomize();
     onClickFunc(0); //Redraw when we load the page
 
