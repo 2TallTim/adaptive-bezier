@@ -9,10 +9,8 @@ var controls = [];
 var renderer;
 
 function recursiveBezier(ptsList,stopCond,depth=0) {
-    //console.log(ptsList);
-    //console.log(depth);
 
-    if(depth>=MAX_DEPTH){
+    if(depth>=MAX_DEPTH || stopCond(ptsList)){
         return [ptsList[0]]; //always return start point of seg
     }else{
         u = 0.5; //Split in the middle
@@ -37,6 +35,30 @@ function recursiveBezier(ptsList,stopCond,depth=0) {
     }
 }
 
+function dot(a,b){ //vector dot product
+    return (a.x*b.x + a.y*b.y);
+}
+function vecsub(a,b){
+    return {x:a.x - b.x,y:a.y - b.y} 
+}
+
+var sumDist = function(ptsList){ //Sum of distances adaptive method
+    sum = 0;
+    b = vecsub(ptsList[0],ptsList[ptsList.length-1]);
+    for (var i = 1; i < ptsList.length-1; i++) {
+        a = vecsub(ptsList[0],ptsList[i]);
+        q = dot(a,b)/dot(b,b);
+        q = {x:b.x*q,y:b.y*q};
+        rej = vecsub(a,q);
+        sum+= dot(rej,rej);
+    }
+    return (sum<BezierRenderer.EPSILON);
+}
+
+var uniform = function(ptsList){
+    return false;
+}
+
 var BezierRenderer = function(canvas){
     BezierRenderer.canvas = canvas;
     BezierRenderer.degree = 5;
@@ -46,6 +68,9 @@ var BezierRenderer = function(canvas){
     BezierRenderer.animDemoU = false;
     BezierRenderer.animHandle = -1;
     BezierRenderer.alternateColors = false;
+    BezierRenderer.EPSILON = 0.5;
+    BezierRenderer.adaptiveFunc = uniform;
+    BezierRenderer.adaptiveFuncName = "uniform";
 
     BezierRenderer.toggleAnimDemoU = function() {
         if (BezierRenderer.animDemoU) {
@@ -127,7 +152,7 @@ var BezierRenderer = function(canvas){
 
         //The actual bezier curve
 
-        bez_pts = recursiveBezier(ptsList,(a)=>false);
+        bez_pts = recursiveBezier(ptsList,BezierRenderer.adaptiveFunc);
         bez_pts_dup = [bez_pts[0]];
 
         //deduplicate bez_pts
@@ -232,24 +257,33 @@ window.onload = function() {
     }
     degController.onChange(onClickFunc);//Redraw when the parameters are changed
     
-
-    gui.add(BezierRenderer,'alternateColors').onChange(function(value){
+    redrawFunc = function(value){
         BezierRenderer.render();
-    });
+    };
+
+    gui.add(BezierRenderer,"EPSILON",0.001,1).onChange(redrawFunc);
+
+    gui.add(BezierRenderer,'alternateColors').onChange(redrawFunc);
 
     gui.add(this, 'randomize');
+
+    gui.add(BezierRenderer, 'adaptiveFuncName', { "Uniform": "uniform", "Sum Of Distances": "sumDist"} ).onChange(function(value){
+        if(value=="uniform"){
+            BezierRenderer.adaptiveFunc = uniform;
+        }else if(value == "sumDist"){
+            BezierRenderer.adaptiveFunc = sumDist;
+        }
+        BezierRenderer.render();
+
+    });
 
     var dcFolder = gui.addFolder('deCasteljau Visualizer');
 
     var du = dcFolder.add(BezierRenderer,'demoU',0,1,0.01).listen();
 
-    du.onChange(function(value){
-        BezierRenderer.render();
-    });
+    du.onChange(redrawFunc);
 
-    dcFolder.add(BezierRenderer,'showDCsubdiv').onChange(function(value){
-        BezierRenderer.render();
-    });
+    dcFolder.add(BezierRenderer,'showDCsubdiv').onChange(redrawFunc);
 
     dcFolder.add(BezierRenderer,'toggleAnimDemoU');
     randomize();
