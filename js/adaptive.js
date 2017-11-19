@@ -59,6 +59,16 @@ var uniform = function(ptsList){
     return false;
 }
 
+var sumAngles = function(ptsList) {
+    sum = 0;
+    for (var i = 1; i < ptsList.length-1; i++ ){
+        a = vecsub(ptsList[i-1],ptsList[i]);
+        b = vecsub(ptsList[i],ptsList[i+1]);
+        sum+= Math.abs(Math.atan2(a.y,a.x) - Math.atan2(b.y,b.x));
+    }
+    return (sum<BezierRenderer.ANGLE_EPSILON);
+}
+
 var BezierRenderer = function(canvas){
     BezierRenderer.canvas = canvas;
     BezierRenderer.degree = 5;
@@ -69,6 +79,7 @@ var BezierRenderer = function(canvas){
     BezierRenderer.animHandle = -1;
     BezierRenderer.alternateColors = false;
     BezierRenderer.EPSILON = 0.5;
+    BezierRenderer.ANGLE_EPSILON = 0.1;
     BezierRenderer.adaptiveFunc = uniform;
     BezierRenderer.adaptiveFuncName = "uniform";
 
@@ -164,7 +175,7 @@ var BezierRenderer = function(canvas){
         bez_pts = bez_pts_dup;
 
 
-        ctx.lineWidth = 9;
+        ctx.lineWidth = 13;
         ctx.setLineDash([0]);
         ctx.lineCap = 'round';
 
@@ -263,15 +274,19 @@ window.onload = function() {
 
     gui.add(BezierRenderer,"EPSILON",0.001,1).onChange(redrawFunc);
 
+    gui.add(BezierRenderer,"ANGLE_EPSILON",0.01,0.3).onChange(redrawFunc);
+
     gui.add(BezierRenderer,'alternateColors').onChange(redrawFunc);
 
     gui.add(this, 'randomize');
 
-    gui.add(BezierRenderer, 'adaptiveFuncName', { "Uniform": "uniform", "Sum Of Distances": "sumDist"} ).onChange(function(value){
+    gui.add(BezierRenderer, 'adaptiveFuncName', { "Uniform": "uniform", "Sum Of Distances": "sumDist", "Sum of Angles": "sumAngles"} ).onChange(function(value){
         if(value=="uniform"){
             BezierRenderer.adaptiveFunc = uniform;
         }else if(value == "sumDist"){
             BezierRenderer.adaptiveFunc = sumDist;
+        }else if(value == "sumAngles"){
+            BezierRenderer.adaptiveFunc = sumAngles;
         }
         BezierRenderer.render();
 
