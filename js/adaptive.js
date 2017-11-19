@@ -7,6 +7,7 @@ var MAX_DEPTH = 8;
 
 var controls = [];
 var renderer;
+var preset = 0;
 
 function recursiveBezier(ptsList,stopCond,depth=0) {
 
@@ -111,7 +112,7 @@ var BezierRenderer = function(canvas){
     BezierRenderer.showDCsubdiv = false;
     BezierRenderer.animDemoU = false;
     BezierRenderer.animHandle = -1;
-    BezierRenderer.alternateColors = false;
+    BezierRenderer.alternateColors = true;
     BezierRenderer.DISTANCE_EPSILON = 0.25;
     BezierRenderer.ANGLE_EPSILON = 0.1;
     BezierRenderer.AREA_EPSILON = 0.5;
@@ -268,7 +269,15 @@ var Control = function(parent) {
     });
 }
 
-
+function exportPreset(){
+    psx = [];
+    psy = [];
+    for (var i = 0; i < controls.length; i++) {
+        psx.push(controls[i].x);
+        psy.push(controls[i].y);
+    }
+    console.log("psx = ["+psx+"];\npsy = ["+psy+"];");
+}
 
 window.onload = function() {
   //Create canvas & wrap elements
@@ -312,7 +321,9 @@ window.onload = function() {
         BezierRenderer.render();
     }
     degController.onChange(onClickFunc);//Redraw when the parameters are changed
-    
+    degController.listen();
+
+
     redrawFunc = function(value){
         BezierRenderer.render();
     };
@@ -342,6 +353,43 @@ window.onload = function() {
         BezierRenderer.render();
 
     }).name("Adaptive Criterion");
+
+    gui.add(window,'preset',
+    {
+        "---select---":0,
+        "Cusp (3)":1,
+        "Zig-Zag (8)":2,
+        "Knot (9)":3
+    }).onChange(function(value){
+        if(value == 1){
+            BezierRenderer.degree = 3;
+            psy = [0,580,0,580];
+            psx = [780,0,0,780];
+        }else if (value == 2){
+            psy = [0, 580, 0,  580, 0,   580, 0,   580, 0,   580];
+            psx = [0, 80, 160, 240, 320, 400, 480, 560, 640, 720];
+        }else if (value == 3) {
+            BezierRenderer.degree = 9;
+            psy = [341,446,76,41,204,544,372,220,192,341];
+            psx = [475,481,86,631,696,360,80,305,455,475];
+        }
+        if(value!= 0){
+            for (var i = 0; i < psx.length; i++) {
+                c = controls[i]
+                c.y  = psy[i]+11;
+                c.x = psx[i]+11;
+                $(c.elem).css("top",psy[i]);
+                $(c.elem).css("left",psx[i]);
+            }
+            for (var i = 0; i < controls.length; i++) {
+                if(i<BezierRenderer.degree+1)
+                    $(controls[i].elem).removeClass("hidden");
+                else
+                    $(controls[i].elem).addClass("hidden");
+            }
+            BezierRenderer.render();
+        }
+    }).name("Presets");
 
     var dcFolder = gui.addFolder('deCasteljau Visualizer');
 
