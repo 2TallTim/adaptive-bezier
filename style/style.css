@@ -34,3 +34,10 @@ canvas{
 .hidden{
     display: none;
 }
+#segcount{
+    position: absolute;
+    margin: 0px;
+    left: 10px;
+    bottom: 10px;
+    z-index: 0;
+}
