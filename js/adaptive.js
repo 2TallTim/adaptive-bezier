@@ -155,7 +155,7 @@ var BezierRenderer = function(canvas){
         }
         
         //deCasteljau
-
+        var dcpt;
 
         if(BezierRenderer.showDCsubdiv){
             u = BezierRenderer.demoU;
@@ -178,10 +178,8 @@ var BezierRenderer = function(canvas){
                 }
 
             }
-            ctx.strokeStyle = "#000";
-            ctx.beginPath();
-            ctx.arc(pl[0].x,pl[0].y,8,0,Math.PI*2);
-            ctx.fill();
+
+            dcpt = pl[0];
         }
 
         //Control Polygon
@@ -217,7 +215,7 @@ var BezierRenderer = function(canvas){
 
         for (var i = 1; i < bez_pts.length; i++) {
             if (BezierRenderer.alternateColors && i%2 == 0) {
-                ctx.strokeStyle = "#f00";
+                ctx.strokeStyle = "#0F0";
             }else{
                 ctx.strokeStyle = "#000";
             }
@@ -228,6 +226,12 @@ var BezierRenderer = function(canvas){
         }
 
         $("#segcount").text(""+(bez_pts.length-1)+" segments");
+        if(BezierRenderer.showDCsubdiv){
+            ctx.fillStyle = "#F00";
+            ctx.beginPath();
+            ctx.arc(pl[0].x,pl[0].y,11,0,Math.PI*2);
+            ctx.fill();
+        }
     }
 
 }
@@ -237,8 +241,8 @@ var BezierRenderer = function(canvas){
 var randomize = function(){  //Randomize curve point positions
     for (var i = 0; i < controls.length; i++) {
         c = controls[i]
-        c.y  = Math.floor(Math.random() * canvas.height);
-        c.x = Math.floor(Math.random() * canvas.width);
+        c.y  = Math.floor(Math.random() * (canvas.height - 20))+ 10;
+        c.x = Math.floor(Math.random() * (canvas.width - 20))+ 10;
         $(c.elem).css("top",c.y-11);
         $(c.elem).css("left",c.x-11);
     }
@@ -357,9 +361,14 @@ window.onload = function() {
     gui.add(window,'preset',
     {
         "---select---":0,
-        "Cusp (3)":1,
-        "Zig-Zag (8)":2,
-        "Knot (9)":3
+        "Cusp":1,
+        "Zig-Zag":2,
+        "Knot":3,
+        "Crossed Arrow":4,
+        "High Degr Straight Line":5,
+        "Out of Order Line":6,
+        "Sharp Turns":7,
+        "Angle Worst":8
     }).onChange(function(value){
         if(value == 1){
             BezierRenderer.degree = 3;
@@ -372,6 +381,26 @@ window.onload = function() {
             BezierRenderer.degree = 9;
             psy = [341,446,76,41,204,544,372,220,192,341];
             psx = [475,481,86,631,696,360,80,305,455,475];
+        }else if (value == 4){
+            BezierRenderer.degree = 4;
+            psx = [780,0,780,0,780];
+            psy = [0,580,300,0,580];
+        }else if (value == 5){
+            BezierRenderer.degree = 9;
+            psx = [780,709,628,487,337,287,217,138,60,11];
+            psy = [11,70,136,242,345,394,447,503,559,580];
+        }else if (value == 6){
+            BezierRenderer.degree = 9;
+            psx = [791,92,172,549,363,470,265,650,742,11];
+            psy = [300,300,300,300,300,300,300,300,300,300];
+        }else if (value == 7){
+            BezierRenderer.degree = 9;
+            psx = [0,771,748,721,691,780,780,780,780,780];
+            psy = [0,574,555,533,513,11,80,33,56,580];
+        }else if (value == 8){
+            BezierRenderer.degree = 5;
+            psx = [1,781,370,372,781,1,769,499,205,83];
+            psy = [581,90,581,1,495,1,1,411,102,94];
         }
         if(value!= 0){
             for (var i = 0; i < psx.length; i++) {
